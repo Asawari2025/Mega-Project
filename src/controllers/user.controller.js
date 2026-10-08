@@ -1,5 +1,5 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { ApiError } from "../utils/ApiError.js";
+import ApiError from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import {uploadToCloudinary} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -17,16 +17,15 @@ const registerUser = asyncHandler(async (req, res) => {
      //8. check for user creation
      //9. return res
      
-     const { fullName, username, email, password } = req.body;
-     console.log("User details received:", { email, password });
+     const { fullName, username, email, password } = req.body ?? {};
 
 
-     if([fullName, email, username, password].some((field) => field?.trim() === ""))
+     if([fullName, email, username, password].some((field) => typeof field !== "string" || field.trim() === ""))
      {
         throw new ApiError(400,"all fields are required")
      }
      
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or : [{username},{email}]
      })
 
@@ -35,15 +34,18 @@ const registerUser = asyncHandler(async (req, res) => {
      }
 
      //.files is given by multer which receives file from user
-    const avtarLocalPath = req.files?.avatar[0]?.path;
-    const coverImageLocalPath = req.files?.coverImage[0]?.path;
+     const avtarLocalPath = req.files?.avatar?.[0]?.path;
+     const coverImageLocalPath = req.files?.coverImage ? req.files?.coverImage?.[0]?.path: '';
+
 
     if(!avtarLocalPath){
         throw new ApiError(400,"Avatar file is required")
     }
 
     const avatar = await uploadToCloudinary(avtarLocalPath);
-    const coverImage = await uploadToCloudinary(coverImageLocalPath);
+    const coverImage = coverImageLocalPath
+        ? await uploadToCloudinary(coverImageLocalPath)
+        : null;
 
 
     if(!avatar){
@@ -52,7 +54,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
 
     const user = await User.create({
-        fullName, avatar: avatar.url, coverImage: coverImage?.url || "", email, username: username.toLowerCase()
+        fullName, avatar: avatar.url, coverImage: coverImage?.url || "", email, username: username.toLowerCase(), password
     })
 
     const createdUser = await User.findById(user._id).select(

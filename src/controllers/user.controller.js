@@ -158,8 +158,8 @@ const logoutUser = asyncHandler(async(req,res)=>{
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {
-                 refreshToken : undefined
+            $unset: {
+                 refreshToken : 1
             }
         },
         {
@@ -459,7 +459,7 @@ const getWatchHistory = asyncHandler(async(req,res)=>{
    )
 })
 
-console.log(channel,"channel aggregate piepeline response");
+//console.log(channel,"channel aggregate piepeline response");
 
 export { 
     registerUser, 
